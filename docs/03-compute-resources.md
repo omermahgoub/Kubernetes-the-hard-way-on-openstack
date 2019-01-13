@@ -14,7 +14,9 @@ The public network is a network that contains external access and can be reached
 ```
 openstack network list
 ```
-Output is 
+
+`Output is `
+
 ```
 | 80e37cda-1762-4d98-8e55-df3e33710295 | admin_floating_net      | 96368227-27ff-4b66-b9bf-ba8c4118e2c2 |
 ```
@@ -25,15 +27,46 @@ The virtual network is connected to the public network via a router during the n
 
 1.  Create the router kthw-router and set gateway on the public network:
 ```
-    openstack router create ktw-router
-    openstack router set --external-gateway $(openstack network show admin_floating_net -f value -c id) $(openstack router show Router1 -f value -c id)
+openstack router create kthw-router
+```
+
+`Output`
+
+```
++-------------------------+--------------------------------------+
+| Field                   | Value                                |
++-------------------------+--------------------------------------+
+| admin_state_up          | UP                                   |
+| availability_zone_hints | None                                 |
+| availability_zones      | None                                 |
+| created_at              | None                                 |
+| description             | None                                 |
+| distributed             | None                                 |
+| external_gateway_info   | None                                 |
+| flavor_id               | None                                 |
+| ha                      | None                                 |
+| id                      | 3f1f9a37-5a4b-4fff-9325-7cd2f1990b87 |
+| location                | None                                 |
+| name                    | kthw-router                           |
+| project_id              | a3a92951eb3b4e8a8746236ef7949cf6     |
+| revision_number         | None                                 |
+| routes                  | None                                 |
+| status                  | ACTIVE                               |
+| tags                    |                                      |
+| updated_at              | None                                 |
++-------------------------+--------------------------------------+
+```
+```
+openstack router set --external-gateway $(openstack network show admin_floating_net -f value -c id) $(openstack router show Router1 -f value -c id)
 ```
 2.  Create the kthw-virtual-network private network and subnet kthw-virtual-subnet in this network with 10.240.0.0/24 range. 
     This range to assign a private IP address to each node in the Kubernetes cluster.
 ```
-    openstack network create kthw-virtual-network | openstack subnet create --subnet-range 10.240.0.0/24 --gateway auto --dhcp --network kthw-virtual-network --dns-nameserver 46.49.140.155 --dns-nameserver 8.8.8.8 kthw-virtual-subnet | openstack add
+openstack network create kthw-virtual-network | openstack subnet create --subnet-range 10.240.0.0/24 --gateway auto --dhcp --network kthw-virtual-network --dns-nameserver 46.49.140.155 --dns-nameserver 8.8.8.8 kthw-subnet
 ```
-Output
+
+`Output`
+
 ```
 +-------------------+--------------------------------------+
 | Field             | Value                                |
@@ -46,13 +79,13 @@ Output
 | enable_dhcp       | True                                 |
 | gateway_ip        | 10.240.0.1                           |
 | host_routes       |                                      |
-| id                | f49f1df3-e80e-4304-b261-a7deade7bc55 |
+| id                | dac88cc2-3c83-4d65-97ce-8e54cdfbfdd7 |
 | ip_version        | 4                                    |
 | ipv6_address_mode | None                                 |
 | ipv6_ra_mode      | None                                 |
 | location          | None                                 |
-| name              | kthw-virtual-subnet                  |
-| network_id        | 6f58a4d8-870c-4577-9071-53d07612f2d7 |
+| name              | kthw-subnet                  |
+| network_id        | 944ba535-f9ab-43cd-8909-e7093823232f |
 | project_id        | a3a92951eb3b4e8a8746236ef7949cf6     |
 | revision_number   | None                                 |
 | segment_id        | None                                 |
@@ -61,45 +94,59 @@ Output
 | tags              |                                      |
 | updated_at        | None                                 |
 +-------------------+--------------------------------------+
-
-
-
-### Firewall Rules
-
-Create a firewall rule that allows internal communication across all protocols:
+```
+3. Add kthw-subnet interface to the kthw-router 
 
 ```
-gcloud compute firewall-rules create kubernetes-the-hard-way-allow-internal \
-  --allow tcp,udp,icmp \
-  --network kubernetes-the-hard-way \
-  --source-ranges 10.240.0.0/24,10.200.0.0/16
+openstack router add subnet kthw-router $(openstack subnet show kthw-subnet -f value -c id)
 ```
 
-Create a firewall rule that allows external SSH, ICMP, and HTTPS:
+Public_IP=$(openstack floating ip create admin_floating_net -f value -c floating_ip_address)
 
+### Public IP Address
+Create a public IP address that will be used by remote clients to connect to the Kubernetes control plane:
 ```
-gcloud compute firewall-rules create kubernetes-the-hard-way-allow-external \
-  --allow tcp:22,tcp:6443,icmp \
-  --network kubernetes-the-hard-way \
-  --source-ranges 0.0.0.0/0
-```
-
-> An [external load balancer](https://cloud.google.com/compute/docs/load-balancing/network/) will be used to expose the Kubernetes API Servers to remote clients.
-
-List the firewall rules in the `kubernetes-the-hard-way` VPC network:
-
-```
-gcloud compute firewall-rules list --filter="network:kubernetes-the-hard-way"
+Public_IP=$(openstack floating ip create admin_floating_net -f value -c floating_ip_address)
 ```
 
-> output
-
+### Security Groups
+Create a security group that allows internal communication across all protocols:
 ```
-NAME                                    NETWORK                  DIRECTION  PRIORITY  ALLOW                 DENY
-kubernetes-the-hard-way-allow-external  kubernetes-the-hard-way  INGRESS    1000      tcp:22,tcp:6443,icmp
-kubernetes-the-hard-way-allow-internal  kubernetes-the-hard-way  INGRESS    1000      tcp,udp,icmp
+openstack security group create kthw-allow-internal
 ```
-
+Add rules to security group
+```
+for i in tcp udp icmp
+do
+  openstack security group rule create \
+      --ingress \
+      --protocol ${i} \
+      --remote-group kthw-allow-internal \
+      kthw-allow-internal
+done
+```
+Create a security group that allows external SSH, ICMP, and HTTPS:
+```
+openstack security group create kubernetes-the-hard-way-allow-external
+```
+Add rules for external SSH, ICMP, and HTTPS to security group 
+```
+openstack security group rule create \
+    --ingress \
+    --protocol icmp \
+    kubernetes-the-hard-way-allow-external
+```
+Add rules for external SSH, 6443 to security group 
+```
+for port in 22 6443
+do
+  openstack security group rule create \
+      --ingress \
+      --protocol tcp \
+      --dst-port ${port} \
+      kubernetes-the-hard-way-allow-external
+done
+```
 ### Kubernetes Public IP Address
 
 Allocate a static IP address that will be attached to the external load balancer fronting the Kubernetes API Servers:
