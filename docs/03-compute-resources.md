@@ -1,8 +1,7 @@
 # Provisioning Compute Resources
 
-Kubernetes requires a set of machines to host the Kubernetes control plane and the worker nodes where containers are ultimately run. In this lab you will provision the compute resources required for running a secure and highly available Kubernetes cluster across a single [compute zone](https://cloud.google.com/compute/docs/regions-zones/regions-zones).
+Kubernetes requires a set of machines to host the Kubernetes control plane and the worker nodes where containers are ultimately run. In this lab you will provision the compute resources required for running a secure and highly available Kubernetes cluster across a single datacenter [jed1] (http://jed1-vdc.bluvalt.com/).
 
-> Ensure a default compute zone and region have been set as described in the [Prerequisites](01-prerequisites.md#set-a-default-compute-region-and-zone) lab.
 
 ## Networking
 
@@ -10,27 +9,60 @@ The Kubernetes [networking model](https://kubernetes.io/docs/concepts/cluster-ad
 
 > Setting up network policies is out of scope for this tutorial.
 
-### Virtual Private Cloud Network
-
-In this section a dedicated [Virtual Private Cloud](https://cloud.google.com/compute/docs/networks-and-firewalls#networks) (VPC) network will be setup to host the Kubernetes cluster.
-
-Create the `kubernetes-the-hard-way` custom VPC network:
-
+### Public Network
+The public network is a network that contains external access and can be reached by the outside world is already created on Bluvalt cloud. 
 ```
-gcloud compute networks create kubernetes-the-hard-way --subnet-mode custom
+openstack network list
 ```
-
-A [subnet](https://cloud.google.com/compute/docs/vpc/#vpc_networks_and_subnets) must be provisioned with an IP address range large enough to assign a private IP address to each node in the Kubernetes cluster.
-
-Create the `kubernetes` subnet in the `kubernetes-the-hard-way` VPC network:
-
+Output is 
 ```
-gcloud compute networks subnets create kubernetes \
-  --network kubernetes-the-hard-way \
-  --range 10.240.0.0/24
+| 80e37cda-1762-4d98-8e55-df3e33710295 | admin_floating_net      | 96368227-27ff-4b66-b9bf-ba8c4118e2c2 |
 ```
 
-> The `10.240.0.0/24` IP address range can host up to 254 compute instances.
+### Virtual Network 
+
+The virtual network is connected to the public network via a router during the network setup. This allows each OpenStack  instance attached to the virtual network the ability to request a floating IP from the public network for public access.
+
+1.  Create the router kthw-router and set gateway on the public network:
+```
+    openstack router create ktw-router
+    openstack router set --external-gateway $(openstack network show admin_floating_net -f value -c id) $(openstack router show Router1 -f value -c id)
+```
+2.  Create the kthw-virtual-network private network and subnet kthw-virtual-subnet in this network with 10.240.0.0/24 range. 
+    This range to assign a private IP address to each node in the Kubernetes cluster.
+```
+    openstack network create kthw-virtual-network | openstack subnet create --subnet-range 10.240.0.0/24 --gateway auto --dhcp --network kthw-virtual-network --dns-nameserver 46.49.140.155 --dns-nameserver 8.8.8.8 kthw-virtual-subnet | openstack add
+```
+Output
+```
++-------------------+--------------------------------------+
+| Field             | Value                                |
++-------------------+--------------------------------------+
+| allocation_pools  | 10.240.0.2-10.240.0.254              |
+| cidr              | 10.240.0.0/24                        |
+| created_at        | None                                 |
+| description       | None                                 |
+| dns_nameservers   | 46.49.140.155, 8.8.8.8               |
+| enable_dhcp       | True                                 |
+| gateway_ip        | 10.240.0.1                           |
+| host_routes       |                                      |
+| id                | f49f1df3-e80e-4304-b261-a7deade7bc55 |
+| ip_version        | 4                                    |
+| ipv6_address_mode | None                                 |
+| ipv6_ra_mode      | None                                 |
+| location          | None                                 |
+| name              | kthw-virtual-subnet                  |
+| network_id        | 6f58a4d8-870c-4577-9071-53d07612f2d7 |
+| project_id        | a3a92951eb3b4e8a8746236ef7949cf6     |
+| revision_number   | None                                 |
+| segment_id        | None                                 |
+| service_types     | None                                 |
+| subnetpool_id     | None                                 |
+| tags              |                                      |
+| updated_at        | None                                 |
++-------------------+--------------------------------------+
+
+
 
 ### Firewall Rules
 
