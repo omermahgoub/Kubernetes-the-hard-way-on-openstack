@@ -1,6 +1,6 @@
 # Provisioning Compute Resources
 
-Kubernetes requires a set of machines to host the Kubernetes control plane and the worker nodes where containers are ultimately run. In this lab you will provision the compute resources required for running a secure and highly available Kubernetes cluster across a single datacenter [jed1] (http://jed1-vdc.bluvalt.com/).
+Kubernetes requires a set of machines to host the Kubernetes control plane and the worker nodes where containers are ultimately run. In this lab you will provision the compute resources required for running a secure and highly available Kubernetes cluster across a single datacenter [jed1](http://jed1-vdc.bluvalt.com/).
 
 
 ## Networking
@@ -25,7 +25,7 @@ openstack network list
 
 The virtual network is connected to the public network via a router during the network setup. This allows each OpenStack  instance attached to the virtual network the ability to request a floating IP from the public network for public access.
 
-1.  Create the router kthw-router and set gateway on the public network:
+1.  Create the router kthw-router:
 ```
 openstack router create kthw-router
 ```
@@ -56,11 +56,13 @@ openstack router create kthw-router
 | updated_at              | None                                 |
 +-------------------------+--------------------------------------+
 ```
+2. Connect the router to the gateway of the external network:
 ```
 openstack router set --external-gateway $(openstack network show admin_floating_net -f value -c id) $(openstack router show Router1 -f value -c id)
 ```
-2.  Create the kthw-virtual-network private network and subnet kthw-virtual-subnet in this network with 10.240.0.0/24 range. 
+3.  Create the kthw-virtual-network private network and subnet kthw-virtual-subnet in this network with 10.240.0.0/24 range. 
     This range to assign a private IP address to each node in the Kubernetes cluster.
+    `P.S: Kubernetes nodes: 10.180.0.0/24 Services: 10.200.0.1.0/24 Pods: 10.34.128.0/17`
 ```
 openstack network create kthw-virtual-network | openstack subnet create --subnet-range 10.240.0.0/24 --gateway auto --dhcp --network kthw-virtual-network --dns-nameserver 46.49.140.155 --dns-nameserver 8.8.8.8 kthw-subnet
 ```
@@ -101,18 +103,27 @@ openstack network create kthw-virtual-network | openstack subnet create --subnet
 openstack router add subnet kthw-router $(openstack subnet show kthw-subnet -f value -c id)
 ```
 
-Public_IP=$(openstack floating ip create admin_floating_net -f value -c floating_ip_address)
-
-### Public IP Address
-Create a public IP address that will be used by remote clients to connect to the Kubernetes control plane:
-```
-Public_IP=$(openstack floating ip create admin_floating_net -f value -c floating_ip_address)
-```
-
 ### Security Groups
 Create a security group that allows internal communication across all protocols:
 ```
 openstack security group create kthw-allow-internal
+```
+`Output`
+```
++-----------------+--------------------------------------+
+| Field           | Value                                |
++-----------------+--------------------------------------+
+| created_at      | None                                 |
+| description     | kthw-allow-internal                  |
+| id              | 76901ae5-2245-4bb9-bbc4-b4dbc5bcf383 |
+| location        | None                                 |
+| name            | kthw-allow-internal                  |
+| project_id      | a3a92951eb3b4e8a8746236ef7949cf6     |
+| revision_number | None                                 |
+| rules           |                                      |
+| tags            | []                                   |
+| updated_at      | None                                 |
++-----------------+--------------------------------------+
 ```
 Add rules to security group
 ```
@@ -121,20 +132,30 @@ do
   openstack security group rule create \
       --ingress \
       --protocol ${i} \
-      --remote-group kthw-allow-internal \
+      --remote-ip 10.240.0.0/24 \
+      kthw-allow-internal
+done
+```
+```
+for i in tcp udp icmp
+do
+  openstack security group rule create \
+      --ingress \
+      --protocol ${i} \
+      --remote-ip 10.200.0.0/16 \
       kthw-allow-internal
 done
 ```
 Create a security group that allows external SSH, ICMP, and HTTPS:
 ```
-openstack security group create kubernetes-the-hard-way-allow-external
+openstack security group create kthw-allow-external
 ```
 Add rules for external SSH, ICMP, and HTTPS to security group 
 ```
 openstack security group rule create \
     --ingress \
     --protocol icmp \
-    kubernetes-the-hard-way-allow-external
+    kthw-allow-external
 ```
 Add rules for external SSH, 6443 to security group 
 ```
@@ -144,30 +165,26 @@ do
       --ingress \
       --protocol tcp \
       --dst-port ${port} \
-      kubernetes-the-hard-way-allow-external
+      kthw-allow-external
 done
+```
+
+### Image ###
+To be able to create instances, an image should be provided. Depending on the OpenStack environment an image catalog can be provided. In this guide we will use Ubuntu as the base operating system.
+```
+openstack image list | grep Ubuntu-16.04.1-LTS
+```
+`Output`
+```
+f99bb6f7-658d-4f7c-840d-40228ee22581 | Ubuntu-16.04.1-LTS                        | active |
 ```
 ### Kubernetes Public IP Address
 
-Allocate a static IP address that will be attached to the external load balancer fronting the Kubernetes API Servers:
-
+Create a public IP address that will be used by remote clients to connect to the Kubernetes control plane:
 ```
-gcloud compute addresses create kubernetes-the-hard-way \
-  --region $(gcloud config get-value compute/region)
+Public_IP=$(openstack floating ip create admin_floating_net -f value -c floating_ip_address)
 ```
 
-Verify the `kubernetes-the-hard-way` static IP address was created in your default compute region:
-
-```
-gcloud compute addresses list --filter="name=('kubernetes-the-hard-way')"
-```
-
-> output
-
-```
-NAME                     REGION    ADDRESS        STATUS
-kubernetes-the-hard-way  us-west1  XX.XXX.XXX.XX  RESERVED
-```
 
 ## Compute Instances
 
