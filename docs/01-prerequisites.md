@@ -1,48 +1,38 @@
 # Prerequisites
 
-## Google Cloud Platform
+## Openstack Cloud Platform: Bluvalt Cloud
 
-This tutorial leverages the [Google Cloud Platform](https://cloud.google.com/) to streamline provisioning of the compute infrastructure required to bootstrap a Kubernetes cluster from the ground up. [Sign up](https://cloud.google.com/free/) for $300 in free credits.
+The guide leverages Openstack cloud platform to streamline provisioning of the compute infrastructure required to bootstrap a Kubernetes cluster from the ground up. [Bluvalt Cloud](https://cloud.bluvalt.com/) is used to demonestrate the lab.
 
-[Estimated cost](https://cloud.google.com/products/calculator/#id=78df6ced-9c50-48f8-a670-bc5003f2ddaa) to run this tutorial: $0.22 per hour ($5.39 per day).
+All configuration is going to be achieved using Openstack API. The guide helps on [Openstack API Access](https://github.com/omermahgoub/openstack/blob/master/README.md). 
 
-> The compute resources required for this tutorial exceed the Google Cloud Platform free tier.
 
-## Google Cloud Platform SDK
+## OpenStack command-line clients
 
 ### Install the Google Cloud SDK
 
-Follow the Google Cloud SDK [documentation](https://cloud.google.com/sdk/) to install and configure the `gcloud` command line utility.
+Follow OpenStack command-line clients [documentation](https://docs.openstack.org/newton/user-guide/common/cli-install-openstack-command-line-clients.html) to install and configure Openstack command line clients.
 
 Verify the Google Cloud SDK version is 218.0.0 or higher:
+```
+openstack --version
+```
+### Set environment variables using the OpenStack RC file
+
+To set the required environment variables for the OpenStack command-line clients, you must create an environment file called an OpenStack rc file, or openrc.sh file. You can download the file from [here](https://github.com/omermahgoub/openstack/tree/master/API), make sure to download the one that correspond to your project datacenter. This project-specific environment file contains the credentials that all OpenStack services use.
+
+In order to use the OpenRC file, run:
+``` 
+source jed1
+```
+### Basic commands
 
 ```
-gcloud version
-```
+openstack server list
 
-### Set a Default Compute Region and Zone
-
-This tutorial assumes a default compute region and zone have been configured.
-
-If you are using the `gcloud` command-line tool for the first time `init` is the easiest way to do this:
+openstack image list
 
 ```
-gcloud init
-```
-
-Otherwise set a default compute region:
-
-```
-gcloud config set compute/region us-west1
-```
-
-Set a default compute zone:
-
-```
-gcloud config set compute/zone us-west1-c
-```
-
-> Use the `gcloud compute zones list` command to view additional regions and zones.
 
 ## Running Commands in Parallel with tmux
 
