@@ -388,20 +388,33 @@ service-account.pem
 
 ## Distribute the Client and Server Certificates
 
-Copy the appropriate certificates and private keys to each worker instance:
+Copy the appropriate certificates and private keys to  prx-1:
 
 ```
 for instance in worker-0 worker-1 worker-2; do
-  gcloud compute scp ca.pem ${instance}-key.pem ${instance}.pem ${instance}:~/
+  scp ca.pem ${instance}-key.pem ${instance}.pem ubuntu@95.177.214.110:/home/ubuntu/
+done
+```
+Copy the appropriate certificates and private keys from prx-01 to each worker instance:
+```
+for instance in worker-0 worker-1 worker-2; do
+  scp ca.pem ${instance}-key.pem ${instance}.pem ${instance}:/home/ubuntu/
 done
 ```
 
-Copy the appropriate certificates and private keys to each controller instance:
+Copy the appropriate certificates and private keys to prx-01:
 
 ```
 for instance in controller-0 controller-1 controller-2; do
-  gcloud compute scp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem \
-    service-account-key.pem service-account.pem ${instance}:~/
+  scp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem \
+    service-account-key.pem service-account.pem ubuntu@95.177.214.110:/home/ubuntu/
+done
+```
+Copy the appropriate certificates and private keys from prx-01 to each controller instance:
+```
+for instance in controller-0 controller-1 controller-2; do
+  scp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem \
+    service-account-key.pem service-account.pem ${instance}:/home/ubuntu/
 done
 ```
 
