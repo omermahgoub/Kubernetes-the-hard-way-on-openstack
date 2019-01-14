@@ -4,7 +4,7 @@
 
 The guide leverages Openstack cloud platform to streamline provisioning of the compute infrastructure required to bootstrap a Kubernetes cluster from the ground up. [Bluvalt Cloud](https://cloud.bluvalt.com/) is used to demonestrate the lab.
 
-All configuration is going to be achieved using Openstack API. The guide helps on [Openstack API Access](https://github.com/omermahgoub/openstack/blob/master/README.md). 
+All configuration is going to be achieved using Openstack API. The guide helps on [Openstack API Access](https://github.com/omermahgoub/openstack/wiki/Openstack-API-access). 
 
 
 ## OpenStack command-line clients
