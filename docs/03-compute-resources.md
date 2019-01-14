@@ -302,7 +302,7 @@ SSH will be used to configure the controller and worker instances. We will use p
 Test SSH access to the `prx-1` compute instances:
 
 ```
-gcloud compute ssh controller-0
+ssh controller-0
 ```
 
 If this is your first time connecting to a compute instance SSH keys will be generated for you. Enter a passphrase at the prompt to continue:
