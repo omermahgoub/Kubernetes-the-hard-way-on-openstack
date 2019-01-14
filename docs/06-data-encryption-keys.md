@@ -31,7 +31,13 @@ resources:
       - identity: {}
 EOF
 ```
+Copy the `encryption-config.yaml` encryption config file to prx-1:
 
+```
+for instance in controller-0 controller-1 controller-2; do
+  scp encryption-config.yaml ubuntu@95.177.214.110:/home/ubuntu/
+done
+```
 Copy the `encryption-config.yaml` encryption config file to each controller instance:
 
 ```
