@@ -26,7 +26,7 @@ Kubernetes The Hard Way guides you through bootstrapping a highly available Kube
 This tutorial assumes you have access to an Openstack Cloud [e.g. Bluvalt Cloud](https://cloud.bluvalt.com).
 
 The below digram is the architect that we are following for our lab
-![KTHW-on-Openstack](images/kthw-openstack.png)
+![kthw-openstack](https://github.com/omermahgoub/kubernetes-the-hard-way-on-openstack/blob/master/docs/images/kthw-openstack.png)
 
 * [Prerequisites](docs/01-prerequisites.md)
 * [Installing the Client Tools](docs/02-client-tools.md)
