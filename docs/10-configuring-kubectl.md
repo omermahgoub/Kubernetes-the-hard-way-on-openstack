@@ -8,14 +8,15 @@ In this lab you will generate a kubeconfig file for the `kubectl` command line u
 
 Each kubeconfig requires a Kubernetes API Server to connect to. To support high availability the IP address assigned to the external load balancer fronting the Kubernetes API Servers will be used.
 
+First retrieve the Public IP address from prx-1
+```
+KUBERNETES_PUBLIC_ADDRESS=$(curl -sS http://169.254.169.254/latest/meta-data/public-ipv4)
+```
+
 Generate a kubeconfig file suitable for authenticating as the `admin` user:
 
 ```
 {
-  KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
-    --region $(gcloud config get-value compute/region) \
-    --format 'value(address)')
-
   kubectl config set-cluster kubernetes-the-hard-way \
     --certificate-authority=ca.pem \
     --embed-certs=true \
