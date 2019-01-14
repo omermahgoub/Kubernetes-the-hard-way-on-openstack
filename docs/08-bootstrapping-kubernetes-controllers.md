@@ -340,53 +340,65 @@ EOF
 
 ## The Kubernetes Frontend Load Balancer
 
-In this section you will provision an external load balancer to front the Kubernetes API Servers. The `kubernetes-the-hard-way` static IP address will be attached to the resulting load balancer.
-
-> The compute instances created in this tutorial will not have permission to complete this section. Run the following commands from the same machine used to create the compute instances.
+In this section you will provision an external load balancer to front the Kubernetes API Servers. The `Public_IP` IP address will be attached to the resulting load balancer.
 
 
 ### Provision a Network Load Balancer
 
 Create the external load balancer network resources:
 
+Here are the commands you can use to set up the nginx load balancer. Run these on the server that you have designated as your load balancer server:
+
 ```
-{
-  KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
-    --region $(gcloud config get-value compute/region) \
-    --format 'value(address)')
+sudo apt-get install -y nginx
+sudo systemctl enable nginx
+sudo mkdir -p /etc/nginx/tcpconf.d
+sudo vi /etc/nginx/nginx.conf
+```
+Add the following to the end of nginx.conf:
+```
+include /etc/nginx/tcpconf.d/*;
+```
+Set up some environment variables for the lead balancer config file:
+```
+CONTROLLER0_IP=10.240.0.10
+CONTROLLER1_IP=10.240.0.11
+CONTROLLER2_IP=10.240.0.12
+```
+Create the load balancer nginx config file:
+```
+cat << EOF | sudo tee /etc/nginx/tcpconf.d/kubernetes.conf
+stream {
+    upstream kubernetes {
+        server $CONTROLLER0_IP:6443;
+        server $CONTROLLER1_IP:6443;
+        server $CONTROLLER2_IP:6443;
+    }
 
-  gcloud compute http-health-checks create kubernetes \
-    --description "Kubernetes Health Check" \
-    --host "kubernetes.default.svc.cluster.local" \
-    --request-path "/healthz"
-
-  gcloud compute firewall-rules create kubernetes-the-hard-way-allow-health-check \
-    --network kubernetes-the-hard-way \
-    --source-ranges 209.85.152.0/22,209.85.204.0/22,35.191.0.0/16 \
-    --allow tcp
-
-  gcloud compute target-pools create kubernetes-target-pool \
-    --http-health-check kubernetes
-
-  gcloud compute target-pools add-instances kubernetes-target-pool \
-   --instances controller-0,controller-1,controller-2
-
-  gcloud compute forwarding-rules create kubernetes-forwarding-rule \
-    --address ${KUBERNETES_PUBLIC_ADDRESS} \
-    --ports 6443 \
-    --region $(gcloud config get-value compute/region) \
-    --target-pool kubernetes-target-pool
+    server {
+        listen 6443;
+        listen 443;
+        proxy_pass kubernetes;
+    }
 }
+EOF
 ```
+Reload the nginx configuration:
+```
+sudo nginx -s reload
+```
+You can verify that the load balancer is working like so:
+```
+curl -k https://localhost:6443/version
+```
+You should get back some json containing version information for your Kubernetes cluster.
 
 ### Verification
 
-Retrieve the `kubernetes-the-hard-way` static IP address:
+Retrieve the `Public IP` address from prx-1
 
 ```
-KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
-  --region $(gcloud config get-value compute/region) \
-  --format 'value(address)')
+KUBERNETES_PUBLIC_ADDRESS=$(curl -sS http://169.254.169.254/latest/meta-data/public-ipv4)
 ```
 
 Make a HTTP request for the Kubernetes version info:
