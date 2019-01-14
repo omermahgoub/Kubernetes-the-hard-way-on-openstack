@@ -193,7 +193,15 @@ admin.kubeconfig
 
 ## Distribute the Kubernetes Configuration Files
 
-Copy the appropriate `kubelet` and `kube-proxy` kubeconfig files to each worker instance:
+Copy the appropriate `kubelet` and `kube-proxy` kubeconfig files to prx-1:
+
+```
+for instance in worker-0 worker-1 worker-2; do
+  scp ${instance}.kubeconfig kube-proxy.kubeconfig ubuntu@95.177.214.110:/home/ubuntu/
+done
+```
+
+Copy the appropriate `kubelet` and `kube-proxy` kubeconfig files from prx-1 to each worker instance:
 
 ```
 for instance in worker-0 worker-1 worker-2; do
@@ -201,7 +209,14 @@ for instance in worker-0 worker-1 worker-2; do
 done
 ```
 
-Copy the appropriate `kube-controller-manager` and `kube-scheduler` kubeconfig files to each controller instance:
+Copy the appropriate `kube-controller-manager` and `kube-scheduler` kubeconfig files to prx-1:
+
+```
+for instance in controller-0 controller-1 controller-2; do
+  scp admin.kubeconfig kube-controller-manager.kubeconfig kube-scheduler.kubeconfig ubuntu@95.177.214.110:/home/ubuntu/
+done
+```
+Copy the appropriate `kube-controller-manager` and `kube-scheduler` kubeconfig files from prx-1 to each controller instance:
 
 ```
 for instance in controller-0 controller-1 controller-2; do
